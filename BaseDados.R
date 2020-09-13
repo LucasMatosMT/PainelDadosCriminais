@@ -11,3 +11,12 @@ base %>%
 
 
 
+basets = ts(base %>% filter(MUNICIPIO == "Cuiaba" & NATUREZA == "Homicidio doloso") %>% select(TOTAL))
+
+plot(basets)
+
+
+fit2 = forecast::auto.arima(base %>% filter(MUNICIPIO == "Cuiaba" & NATUREZA == "Homicidio doloso") %>% select(TOTAL))
+
+forecast::checkresiduals(fit2)
+autoplot(forecast::forecast(fit2,h = 6))
