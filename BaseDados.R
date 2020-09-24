@@ -11,7 +11,7 @@ base %>%
 
 
 
-basets = ts(base %>% filter(MUNICIPIO == "Cuiaba" & NATUREZA == "Homicidio doloso") %>% select(TOTAL))
+basets = ts(base %>% filter(MUNICIPIO == "Cuiaba" & NATUREZA == "Homicidio doloso") %>% select(MUNICIPIO,MES,ANO,TOTAL) %>% View())
 
 plot(basets)
 
