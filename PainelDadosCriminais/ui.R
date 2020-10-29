@@ -3,8 +3,28 @@ library(shinydashboard)
 library(dashboardthemes)
 library(readr)
 library(tidyverse)
+library(DT)
 
-base <- read_delim("DADOS PARA PESQUISA_HOMICIDIO E ROUBO (2017-2019) - FONTE_SINESP.csv",";", escape_double = FALSE, trim_ws = TRUE)
+dados <- read.csv("~/PainelDadosCriminais/dados209-2020p.csv")
+
+
+colnames(dados)[1] <- 'bo'
+# Cria fator para os municípios.
+dados$Municipio.Fato <- factor(dados$Municipio.Fato)
+
+# Converte campo de data do fato.
+# install.packages('lubridate')
+library(lubridate)
+
+dados$Data <- as.Date(parse_date_time(dados[["Data.Fato"]], '%Y-%m-%d'))
+dados$mes_data <- format(dados$Data, "%Y-%m")
+
+n_municipio_dados <- aggregate(bo ~ Municipio.Fato + Natureza.Ocorrencia + mes_data, 
+                               data=dados, 
+                               FUN=length)
+
+municipios = n_municipio_dados %>% select(Municipio.Fato)%>% unique() %>% pull() %>% sort()
+natureza = n_municipio_dados %>% select(Natureza.Ocorrencia)%>% unique() %>% pull() %>% sort()
 
 customTheme <- shinyDashboardThemeDIY(
   ### general
@@ -102,15 +122,15 @@ customTheme <- shinyDashboardThemeDIY(
   ,buttonTextColorHover = "#51D6D6"
   ,buttonBorderColorHover = "#51D6D6"
   
-  ,textboxBackColor = "#1C1C54"
+  ,textboxBackColor = "#46C7DB"
   ,textboxBorderColor = "#51D6D6"
   ,textboxBorderRadius = "0"
   ,textboxBackColorSelect = "#F5F5F5"
   ,textboxBorderColorSelect = "#101678"
   
   ### tables
-  ,tableBackColor = "#E0E0E0"
-  ,tableBorderColor = "#D1D1D1"
+  ,tableBackColor = "#51D6D6"
+  ,tableBorderColor = "#101678"
   ,tableBorderTopSize = "1"
   ,tableBorderRowSize = "1"
 )
@@ -131,23 +151,26 @@ customLogo <- shinyDashboardLogoDIY(
 ui <- dashboardPage(
   dashboardHeader(title = customLogo,titleWidth = "350px"),
   dashboardSidebar(
-    sliderInput("slider", "Number of observations:", 1, 100, 50),
+    sliderInput("inputPeriodo",min = 2009,max = 2020,value = 2009,label = "Periodo de Inicio"),
     selectInput("inputCidade",label =  "Cidades de Mato Grosso:",
-                    choices = base$MUNICIPIO %>% unique %>% sort(),
-                    multiple=FALSE,
+                    choices = municipios,
+                    multiple=TRUE,
+                    selected = "CUIABA",
                     selectize=TRUE,
                     width = '95%'),
     selectInput("inputNatureza",label =  "Natureza:",
-                choices = base$NATUREZA %>% unique %>% sort(),
-                multiple=FALSE,
+                choices = natureza,
+                multiple=TRUE,
+                selected = "ROUBO",
                 selectize=TRUE,
                 width = '95%'),
     width = "350px"
   ),
   dashboardBody(
-    customTheme,
+    shinyDashboardThemes(theme = "onenote"),
     fluidRow(
-    box(plotOutput("plot1",height = "500px"),width = 12,status = "primary",title = "Serie Temporal")
+    box(plotOutput("plot1",height = "500px"),width = 12,status = "primary",title = "Serie Temporal"),
+    box(DT::dataTableOutput("table1"))
     )
   )
 )
