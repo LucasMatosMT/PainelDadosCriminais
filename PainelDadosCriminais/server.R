@@ -6,20 +6,14 @@ library(DT)
 
 server <- function(input, output) {
   
-  dados <- read.csv("~/PainelDadosCriminais/dados209-2020p.csv")
+  n_municipio_dados <- read.csv("n_municipio_dados2.csv")
+  n_municipio_dados$mes_data <- as.Date(parse_date_time(n_municipio_dados$mes_data, '%Y-%m'))
+  n_municipio_dados$mes_data <- format(n_municipio_dados$mes_data, "%Y-%m")
   
-  
-  colnames(dados)[1] <- 'bo'
-  # Cria fator para os municípios.
-  dados$Municipio.Fato <- factor(dados$Municipio.Fato)
-  dados$Data <- as.Date(parse_date_time(dados[["Data.Fato"]], '%Y-%m-%d'))
-  dados$mes_data <- format(dados$Data, "%Y-%m")
-  
-  
-  n_municipio_dados <- aggregate(bo ~ Municipio.Fato + Natureza.Ocorrencia + mes_data, 
-                                 data=dados, 
-                                 FUN=length)
-  
+  period = function(periodo){
+    periodo = periodo[1]:periodo[2]
+    return(periodo)
+  }
   arima_shiny = function(cid,nat,per){
     municipio <- cid
     naturezas <- nat
@@ -31,7 +25,7 @@ server <- function(input, output) {
     
     n_municipio <- n_municipio %>% 
       mutate(ano = str_sub(mes_data,end = 4) %>% as.integer()) %>%
-      filter(ano > periodo) %>% 
+      filter(ano %in% periodo) %>% 
       select(-ano)
     
     n_municipio$mes_data <- as.Date(parse_date_time(n_municipio[["mes_data"]], '%Y-%m'))
@@ -56,13 +50,14 @@ server <- function(input, output) {
     
     
     n_municipio$Municipio.Fato <- municipio
-    n_municipio$Natureza.Ocorrencia <- natureza
+    n_municipio$Natureza.Ocorrencia <- naturezas
     n_municipio[is.na(n_municipio$bo), 'bo'] <- 0
     
     ts_n_municipio <- ts(n_municipio[, 'bo'],
-                         start = c(input$inputPeriodo,
+                         start = c(periodo[1],
                                    month(n_municipio[1, 'mes_data'])),
                          frequency = 12)
+    
     
     l <- BoxCox.lambda(ts_n_municipio)
     ajuste <- auto.arima(ts_n_municipio, lambda = l)
@@ -72,10 +67,10 @@ server <- function(input, output) {
   }
   
   output$plot1 = renderPlot({
-    plot(arima_shiny(input$inputCidade,input$inputNatureza,input$inputPeriodo))
+    plot(arima_shiny(input$inputCidade,input$inputNatureza,period(input$inputPeriodo)))
   })
   
-  output$table1 = DT::renderDataTable({DT::datatable(arima_shiny(input$inputCidade,input$inputNatureza,input$inputPeriodo) %>%
+  output$table1 = DT::renderDataTable({DT::datatable(arima_shiny(input$inputCidade,input$inputNatureza,period(input$inputPeriodo)) %>%
                                                        as.data.frame() %>% 
                                                        round(2),
                                                     extensions = 'Buttons',

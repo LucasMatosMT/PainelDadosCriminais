@@ -3,25 +3,12 @@ library(shinydashboard)
 library(dashboardthemes)
 library(readr)
 library(tidyverse)
+library(lubridate)
 library(DT)
 
-dados <- read.csv("~/PainelDadosCriminais/dados209-2020p.csv")
-
-
-colnames(dados)[1] <- 'bo'
-# Cria fator para os municípios.
-dados$Municipio.Fato <- factor(dados$Municipio.Fato)
-
-# Converte campo de data do fato.
-# install.packages('lubridate')
-library(lubridate)
-
-dados$Data <- as.Date(parse_date_time(dados[["Data.Fato"]], '%Y-%m-%d'))
-dados$mes_data <- format(dados$Data, "%Y-%m")
-
-n_municipio_dados <- aggregate(bo ~ Municipio.Fato + Natureza.Ocorrencia + mes_data, 
-                               data=dados, 
-                               FUN=length)
+n_municipio_dados <- read.csv("n_municipio_dados2.csv")
+n_municipio_dados$mes_data <- as.Date(parse_date_time(n_municipio_dados$mes_data, '%Y-%m'))
+n_municipio_dados$mes_data <- format(n_municipio_dados$mes_data, "%Y-%m")
 
 municipios = n_municipio_dados %>% select(Municipio.Fato)%>% unique() %>% pull() %>% sort()
 natureza = n_municipio_dados %>% select(Natureza.Ocorrencia)%>% unique() %>% pull() %>% sort()
@@ -29,7 +16,7 @@ natureza = n_municipio_dados %>% select(Natureza.Ocorrencia)%>% unique() %>% pul
 customTheme <- shinyDashboardThemeDIY(
   ### general
   appFontFamily = "Segoe UI"
-  ,appFontColor = "#FFFFFF"
+  ,appFontColor = "#51D6D6"
   ,primaryFontColor = "#101678"
   ,infoFontColor = "#101678"
   ,successFontColor = "#EDEDED"
@@ -129,8 +116,8 @@ customTheme <- shinyDashboardThemeDIY(
   ,textboxBorderColorSelect = "#101678"
   
   ### tables
-  ,tableBackColor = "#51D6D6"
-  ,tableBorderColor = "#101678"
+  ,tableBackColor = "#4F4F4F"
+  ,tableBorderColor = "#808080"
   ,tableBorderTopSize = "1"
   ,tableBorderRowSize = "1"
 )
@@ -151,7 +138,7 @@ customLogo <- shinyDashboardLogoDIY(
 ui <- dashboardPage(
   dashboardHeader(title = customLogo,titleWidth = "350px"),
   dashboardSidebar(
-    sliderInput("inputPeriodo",min = 2009,max = 2020,value = 2009,label = "Periodo de Inicio"),
+    sliderInput("inputPeriodo",min = 2009,max = 2020,value = c(2009,2020),label = "Periodo de Inicio"),
     selectInput("inputCidade",label =  "Cidades de Mato Grosso:",
                     choices = municipios,
                     multiple=TRUE,
@@ -167,7 +154,8 @@ ui <- dashboardPage(
     width = "350px"
   ),
   dashboardBody(
-    shinyDashboardThemes(theme = "onenote"),
+    #shinyDashboardThemes(theme = "onenote")
+      customTheme,
     fluidRow(
     box(plotOutput("plot1",height = "500px"),width = 12,status = "primary",title = "Serie Temporal"),
     box(DT::dataTableOutput("table1"))
